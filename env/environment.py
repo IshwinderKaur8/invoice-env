@@ -7,8 +7,20 @@ from .graders import grade_extraction, grade_category, grade_anomaly
 
 class InvoiceEnv:
     """
-    OpenEnv-compliant environment for invoice & receipt processing.
-    Agents interact via step(action) and receive shaped rewards.
+    Invoice & Receipt Processing Environment (OpenEnv-compliant).
+
+    Agents interact with this environment to learn:
+      - Task 1: Field Extraction (vendor_name, invoice_date)
+      - Task 2: Expense Categorization (Travel, Office Supplies, Utilities, Misc)
+      - Task 3: Anomaly Detection (duplicate invoices, unusually high amounts)
+
+    OpenEnv Specification:
+      - step(action) -> (observation, reward, done, info)
+      - reset() -> initial observation
+      - state() -> current environment state
+
+    Episode:
+      One episode = batch of invoices (default batch_size=10).
     """
 
     def __init__(self, batch_size: int = 10, seed: Optional[int] = None, shuffle: bool = True, logger: Optional[Any] = None):
@@ -32,7 +44,12 @@ class InvoiceEnv:
         self.steps: int = 0
 
     def reset(self) -> InvoiceObservation:
-        """Start a new episode with a fresh batch of invoices."""
+        """
+        Reset environment to start a new episode.
+        Returns:
+            InvoiceObservation: initial observation containing vendor_name,
+            invoice_date, amount, description, and metadata.
+        """
         dataset = load_invoices()
         self.invoices = random.sample(dataset, self.batch_size) if self.shuffle else dataset[:self.batch_size]
         self.pointer = 0
@@ -43,8 +60,16 @@ class InvoiceEnv:
 
     def step(self, action: InvoiceAction) -> Tuple[InvoiceObservation, InvoiceReward, bool, Dict]:
         """
-        Evaluate agent action, compute reward, advance pointer.
-        Returns: (next_observation, reward, done, info)
+        Apply agent's action to current invoice.
+        Args:
+            action (InvoiceAction): agent's structured response including
+            extracted_fields, category, anomaly_flag.
+        Returns:
+            Tuple:
+              - InvoiceObservation: next invoice (or terminal observation if done)
+              - InvoiceReward: continuous reward with task-level details
+              - done (bool): True if episode finished
+              - info (dict): ground truth labels and episode metadata
         """
         invoice = self.current_invoice
 
@@ -110,7 +135,12 @@ class InvoiceEnv:
         return next_obs, reward, done, info
 
     def state(self) -> Dict[str, Any]:
-        """Return current environment state for debugging or logging."""
+        """
+        Get current environment state for debugging/logging.
+        Returns:
+            dict: includes pointer, remaining invoices, cumulative reward,
+            steps taken, and current invoice.
+        """
         return {
             "pointer": self.pointer,
             "remaining": len(self.invoices) - self.pointer,

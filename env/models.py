@@ -5,6 +5,15 @@ from datetime import datetime
 
 
 class InvoiceObservation(BaseModel):
+    """
+    Observation model for invoice environment.
+    Fields:
+    vendor_name (str): name of vendor (e.g., Amazon, Uber)
+    invoice_date (str): date in YYYY-MM-DD format
+    amount (float): invoice amount (non-negative)
+    description (str): textual description of expense
+    metadata (dict): auxiliary info (e.g., invoice id)
+    """
     vendor_name: str
     invoice_date: str
     amount: float
@@ -34,6 +43,13 @@ class InvoiceObservation(BaseModel):
 
 
 class InvoiceAction(BaseModel):
+    """
+    Action model for agent response.
+    Fields:
+    extracted_fields (dict): must include vendor_name and invoice_date
+    category (Optional[str]): one of {Travel, Office Supplies, Utilities, Misc}
+    anomaly_flag (Optional[bool]): True if anomaly detected
+    """
     extracted_fields: Dict[str, str]
     category: Optional[str] = None
     anomaly_flag: Optional[bool] = None
@@ -57,6 +73,12 @@ class InvoiceAction(BaseModel):
 
 
 class InvoiceReward(BaseModel):
+    """
+    Reward model for environment feedback.
+    Fields:
+    score (float): continuous reward between 0.0 and 1.0
+    details (dict): breakdown of extraction, category, anomaly scores
+    """
     score: float
     details: Dict[str, Any]
 
