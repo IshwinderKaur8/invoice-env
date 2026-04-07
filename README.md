@@ -18,7 +18,6 @@ Follow this section if someone is cloning the repo for the first time.
 ```bash
 git clone https://github.com/IshwinderKaur8/invoice-env.git
 cd invoice-env
-git checkout anirudh
 ```
 
 ### 3. Create Python Environment
