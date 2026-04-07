@@ -8,9 +8,9 @@ from typing import Any, Dict, List, Optional
 from openai import OpenAI
 
 from backend.db.mongo import get_invoices_collection, get_runs_collection
-from backend.env.dataset import load_invoices
-from backend.env.environment import InvoiceEnv
-from backend.env.models import InvoiceAction
+from env.dataset import load_invoices
+from env.environment import InvoiceEnv
+from env.models import InvoiceAction
 
 
 SYSTEM_PROMPT = (
