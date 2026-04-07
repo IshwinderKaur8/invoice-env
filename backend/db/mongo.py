@@ -17,7 +17,13 @@ def get_db() -> Database:
     mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
     db_name = os.getenv("MONGO_DB_NAME", "invoice_platform")
 
-    _client = MongoClient(mongo_uri)
+    # Keep Mongo optional for local dev: fail fast so service logic can fall back.
+    _client = MongoClient(
+        mongo_uri,
+        serverSelectionTimeoutMS=1500,
+        connectTimeoutMS=1500,
+        socketTimeoutMS=3000,
+    )
     _db = _client[db_name]
     return _db
 

@@ -57,6 +57,8 @@ function Dashboard() {
   const [state, setState] = useState(null);
   const [latestRun, setLatestRun] = useState(null);
 
+  const activeMode = latestRun?.mode || null;
+
   const progress = useMemo(() => {
     const pointer = state?.state?.pointer ?? 0;
     const total = pointer + (state?.state?.remaining ?? 0);
@@ -163,6 +165,17 @@ function Dashboard() {
             Next Step
           </button>
           <span className="text-sm text-slate-500">{loading ? "Processing..." : "Ready"}</span>
+          {activeMode && (
+            <span
+              className={`text-xs px-3 py-1 rounded-full font-medium ${
+                activeMode === "openai"
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              Mode: {activeMode}
+            </span>
+          )}
         </section>
 
         {error && <section className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3">{error}</section>}

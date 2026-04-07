@@ -255,7 +255,12 @@ def run_agent_full(batch_size: int = 12, mode: str = "auto") -> Dict[str, Any]:
     try:
         get_runs_collection().insert_one(run_doc)
     except Exception:
+        # PyMongo may inject _id even when insert fails; strip before storing fallback data.
+        run_doc.pop("_id", None)
         IN_MEMORY_RUNS.insert(0, run_doc)
+
+    # Always return JSON-safe payload.
+    run_doc.pop("_id", None)
 
     return run_doc
 
