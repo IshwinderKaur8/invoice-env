@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invoice-env"
+version = "0.1.0"
+description = "OpenEnv invoice and receipt processing benchmark"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["openenv", "invoice", "benchmark", "finance"]
+authors = [
+  { name = "invoice-env team" }
+]
+dependencies = [
+  "openenv-core>=0.2.0",
+  "pydantic>=2.6,<3.0",
+  "rapidfuzz>=3.9,<4.0",
+  "openai>=1.45,<3.0"
+]
+
+[project.scripts]
+server = "server.app:main"

@@ -2,6 +2,10 @@ name: invoice-processing-env
 description: >
   OpenEnv-compliant Invoice & Receipt Processing Environment simulating real-world
   financial workflows: field extraction, expense categorization, and anomaly detection.
+tags:
+  - openenv
+  - finance
+  - invoice-processing
 
 environment:
   entrypoint: env/environment.py::InvoiceEnv
