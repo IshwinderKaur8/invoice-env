@@ -269,14 +269,14 @@ Example:
 ```text
 [START] task=invoice-processing env=invoice-openenv model=Qwen/Qwen2.5-72B-Instruct
 [STEP] step=1 action={"extracted_fields":{"vendor_name":"Amazon","invoice_date":"2026-01-12"},"category":"Office Supplies","anomaly_flag":false} reward=0.70 done=false error=null
-[END] success=true steps=24 score=0.70 rewards=0.70,0.70,0.70
+[END] success=true steps=24 rewards=0.70,0.70,0.70
 ```
 
 Required line schema (field order preserved):
 
 - `[START] task=<task_name> env=<benchmark> model=<model_name>`
 - `[STEP] step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>`
-- `[END] success=<true|false> steps=<n> score=<score> rewards=<r1,r2,...,rn>`
+- `[END] success=<true|false> steps=<n> rewards=<r1,r2,...,rn>`
 
 Run command:
 

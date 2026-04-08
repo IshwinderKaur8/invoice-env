@@ -10,7 +10,7 @@ from env.models import ALLOWED_CATEGORIES, InvoiceAction
 
 
 IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+API_KEY = os.getenv("HF_TOKEN")
 USE_OPENAI = bool(API_KEY)
 
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
@@ -184,6 +184,9 @@ def run() -> None:
     _log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
     try:
+        if not API_KEY:
+            raise RuntimeError("Missing required environment variable: HF_TOKEN")
+
         # Referenced for organizer compatibility when using image-backed environments.
         _ = IMAGE_NAME
 
@@ -195,21 +198,18 @@ def run() -> None:
             step = steps_taken + 1
             obs_payload = observation.model_dump()
 
-            model_error: Optional[str] = None
             raw_action: Any
             if client is not None:
                 try:
                     raw_action = _query_model(client, MODEL_NAME, obs_payload)
-                except Exception as exc:
-                    model_error = str(exc)
+                except Exception:
                     raw_action = _heuristic_action(obs_payload)
             else:
                 raw_action = _heuristic_action(obs_payload)
 
             try:
                 action = _to_action(raw_action, obs_payload)
-            except Exception as exc:
-                model_error = model_error or str(exc)
+            except Exception:
                 action = InvoiceAction(**_heuristic_action(obs_payload))
             action_str = json.dumps(action.model_dump(), separators=(",", ":"))
 
@@ -219,8 +219,6 @@ def run() -> None:
 
             # Spec-compliant step error field: environment last_action_error if present, else null.
             step_error = info.get("last_action_error") if isinstance(info, dict) else None
-            if not step_error and model_error:
-                step_error = f"model_or_parse_fallback: {model_error}"
 
             _log_step(step=step, action=action_str, reward=float(reward.score), done=done, error=step_error)
 
