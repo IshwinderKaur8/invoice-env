@@ -78,3 +78,36 @@ def test_state_tracking():
     assert done is True
     # Terminal observation metadata
     assert next_obs.metadata.get("terminal") is True
+
+
+def test_repeat_action_penalty_applied_on_third_repeat():
+    env = InvoiceEnv(batch_size=4, seed=42)
+    env.reset()
+
+    repeated_action = InvoiceAction(
+        extracted_fields={"vendor_name": "", "invoice_date": ""},
+        category=None,
+        anomaly_flag=False,
+    )
+
+    _, reward1, _, _ = env.step(repeated_action)
+    _, reward2, _, _ = env.step(repeated_action)
+    _, reward3, _, _ = env.step(repeated_action)
+
+    assert reward1.details["loop_penalty"] == 0.0
+    assert reward2.details["loop_penalty"] == 0.0
+    assert reward3.details["loop_penalty"] == 0.12
+
+
+def test_destructive_penalty_applied_for_noop_destructive_action():
+    env = InvoiceEnv(batch_size=2, seed=42)
+    env.reset()
+
+    destructive_action = InvoiceAction(
+        extracted_fields={"vendor_name": "", "invoice_date": ""},
+        category=None,
+        anomaly_flag=None,
+    )
+
+    _, reward, _, _ = env.step(destructive_action)
+    assert reward.details["destructive_penalty"] == 0.18

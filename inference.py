@@ -59,16 +59,16 @@ def _log_start(task: str, env: str, model: str) -> None:
 def _log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
     error_val = error if error else "null"
     print(
-        f"[STEP] step={step} action={action} reward={reward:.2f} "
+        f"[STEP]  step={step} action={action} reward={reward:.2f} "
         f"done={str(done).lower()} error={error_val}",
         flush=True,
     )
 
 
-def _log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
+def _log_end(success: bool, steps: int, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
+        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
         flush=True,
     )
 
@@ -114,8 +114,8 @@ def run() -> None:
     rewards: List[float] = []
     steps_taken = 0
     success = False
-    score = 0.0
     done = False
+    env: Optional[InvoiceEnv] = None
 
     _log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
@@ -134,12 +134,12 @@ def run() -> None:
             step = steps_taken + 1
             obs_payload = observation.model_dump()
 
-            error: Optional[str] = None
+            model_error: Optional[str] = None
             raw_action: Dict[str, Any]
             try:
                 raw_action = _query_model(client, MODEL_NAME, obs_payload)
             except Exception as exc:
-                error = str(exc)
+                model_error = str(exc)
                 raw_action = {
                     "extracted_fields": {
                         "vendor_name": obs_payload.get("vendor_name", ""),
@@ -152,17 +152,23 @@ def run() -> None:
             action = _to_action(raw_action, obs_payload)
             action_str = json.dumps(action.model_dump(), separators=(",", ":"))
 
-            observation, reward, done, _ = env.step(action)
+            observation, reward, done, info = env.step(action)
             rewards.append(float(reward.score))
             steps_taken = step
 
-            _log_step(step=step, action=action_str, reward=float(reward.score), done=done, error=error)
+            # Spec-compliant step error field: environment last_action_error if present, else null.
+            step_error = info.get("last_action_error") if isinstance(info, dict) else None
 
-        score = sum(rewards) / len(rewards) if rewards else 0.0
-        score = min(max(score, 0.0), 1.0)
-        success = done and score >= 0.0
+            _log_step(step=step, action=action_str, reward=float(reward.score), done=done, error=step_error)
+
+        success = done
     finally:
-        _log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+        if env is not None and hasattr(env, "close"):
+            try:
+                env.close()
+            except Exception:
+                pass
+        _log_end(success=success, steps=steps_taken, rewards=rewards)
 
 
 if __name__ == "__main__":
