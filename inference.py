@@ -89,7 +89,10 @@ def _query_model(client: OpenAI, model_name: str, observation: Dict[str, Any]) -
     return _extract_json(content)
 
 
-def _to_action(raw_action: Dict[str, Any], observation: Dict[str, Any]) -> InvoiceAction:
+def _to_action(raw_action: Any, observation: Dict[str, Any]) -> InvoiceAction:
+    if not isinstance(raw_action, dict):
+        raw_action = {}
+
     extracted = raw_action.get("extracted_fields") or {}
     if not isinstance(extracted, dict):
         extracted = {}
@@ -193,7 +196,7 @@ def run() -> None:
             obs_payload = observation.model_dump()
 
             model_error: Optional[str] = None
-            raw_action: Dict[str, Any]
+            raw_action: Any
             if client is not None:
                 try:
                     raw_action = _query_model(client, MODEL_NAME, obs_payload)
@@ -203,7 +206,11 @@ def run() -> None:
             else:
                 raw_action = _heuristic_action(obs_payload)
 
-            action = _to_action(raw_action, obs_payload)
+            try:
+                action = _to_action(raw_action, obs_payload)
+            except Exception as exc:
+                model_error = model_error or str(exc)
+                action = InvoiceAction(**_heuristic_action(obs_payload))
             action_str = json.dumps(action.model_dump(), separators=(",", ":"))
 
             observation, reward, done, info = env.step(action)
@@ -212,6 +219,8 @@ def run() -> None:
 
             # Spec-compliant step error field: environment last_action_error if present, else null.
             step_error = info.get("last_action_error") if isinstance(info, dict) else None
+            if not step_error and model_error:
+                step_error = f"model_or_parse_fallback: {model_error}"
 
             _log_step(step=step, action=action_str, reward=float(reward.score), done=done, error=step_error)
 
