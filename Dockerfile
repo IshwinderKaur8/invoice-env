@@ -9,4 +9,6 @@ COPY . /app
 
 ENV PYTHONPATH=/app
 
-CMD ["python", "scripts/run_baseline.py"]
+EXPOSE 7860
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]

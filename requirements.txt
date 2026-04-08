@@ -1,4 +1,19 @@
+# Core Web Framework
+fastapi>=0.104.0,<1.0
+uvicorn[standard]>=0.24.0,<1.0
 pydantic>=2.6,<3.0
+python-dotenv>=1.0.0,<2.0
+
+# Data & Database
+pymongo>=4.6,<5.0
 rapidfuzz>=3.9,<4.0
+
+# AI/ML APIs
 openai>=1.45,<2.0
+
+# Testing
 pytest>=8.2,<9.0
+pytest-asyncio>=0.23.0,<1.0
+
+# Utilities
+click>=8.0,<9.0
