@@ -48,8 +48,6 @@ class InvoiceEnv:
         self.logger = logger
         self.seed = seed
         self._rng = random.Random(seed)
-        if seed is not None:
-            random.seed(seed)
 
         self.invoices: List[Dict[str, Any]] = []
         self.pointer: int = 0
@@ -59,6 +57,10 @@ class InvoiceEnv:
         self.tp: int = 0
         self.fp: int = 0
         self.fn: int = 0
+        self.last_action_signature: Optional[Tuple[Any, ...]] = None
+        self.repeat_action_streak: int = 0
+        self.loop_events: int = 0
+        self.destructive_events: int = 0
 
     def reset(self) -> InvoiceObservation:
         """
@@ -78,6 +80,10 @@ class InvoiceEnv:
         self.tp = 0
         self.fp = 0
         self.fn = 0
+        self.last_action_signature = None
+        self.repeat_action_streak = 0
+        self.loop_events = 0
+        self.destructive_events = 0
         self.current_invoice = self.invoices[self.pointer]
         return self._make_observation(self.current_invoice)
 
@@ -129,6 +135,22 @@ class InvoiceEnv:
             if not str(action.extracted_fields.get(key, "") or "").strip()
         )
 
+        action_signature = self._signature(action)
+        if action_signature == self.last_action_signature:
+            self.repeat_action_streak += 1
+        else:
+            self.repeat_action_streak = 1
+            self.last_action_signature = action_signature
+
+        loop_penalty = 0.12 if self.repeat_action_streak >= 3 else 0.0
+        if loop_penalty > 0:
+            self.loop_events += 1
+
+        destructive_action = self._is_destructive_action(action, missing_fields)
+        destructive_penalty = 0.18 if destructive_action else 0.0
+        if destructive_action:
+            self.destructive_events += 1
+
         reward_parts = compute_weighted_reward(
             extraction_score=extraction_score,
             category_score=category_score,
@@ -140,7 +162,7 @@ class InvoiceEnv:
 
         total_score = max(
             MIN_REWARD_SCORE,
-            min(MAX_REWARD_SCORE, reward_parts["final_score"]),
+            min(MAX_REWARD_SCORE, reward_parts["final_score"] - loop_penalty - destructive_penalty),
         )
 
         reward = InvoiceReward(
@@ -149,8 +171,18 @@ class InvoiceEnv:
                 "extraction": extraction_score,
                 "category": category_score,
                 "anomaly": anomaly_score,
+                "field_extraction": extraction_score,
+                "expense_categorization": category_score,
+                "anomaly_detection": anomaly_score,
+                "task_scores": {
+                    "field_extraction": extraction_score,
+                    "expense_categorization": category_score,
+                    "anomaly_detection": anomaly_score,
+                },
                 "base_score": reward_parts["base_score"],
                 "penalty": reward_parts["penalty"],
+                "loop_penalty": loop_penalty,
+                "destructive_penalty": destructive_penalty,
                 "missing_fields": missing_fields,
             },
         )
@@ -183,6 +215,16 @@ class InvoiceEnv:
             "invoice_id": invoice.get("id"),
             "ground_truth_category": invoice.get("category"),
             "ground_truth_anomaly": invoice.get("anomaly_flag"),
+            "task_scores": {
+                "field_extraction": extraction_score,
+                "expense_categorization": category_score,
+                "anomaly_detection": anomaly_score,
+            },
+            "task_graders": {
+                "field_extraction": "env.graders.grade_extraction",
+                "expense_categorization": "env.graders.grade_category",
+                "anomaly_detection": "env.graders.grade_anomaly",
+            },
             "task_context": {
                 "task_1_observation": "Raw invoice text for field extraction",
                 "task_2_observation": "Invoice metadata for categorization",
@@ -220,6 +262,11 @@ class InvoiceEnv:
             "steps": self.steps,
             "current_invoice": self.current_invoice,
             "anomaly_counts": {"tp": self.tp, "fp": self.fp, "fn": self.fn},
+            "trajectory_events": {
+                "repeat_action_streak": self.repeat_action_streak,
+                "loop_events": self.loop_events,
+                "destructive_events": self.destructive_events,
+            },
             "tasks": [
                 {
                     "id": task.id,
@@ -254,3 +301,23 @@ class InvoiceEnv:
                 "anomaly_type": invoice.get("anomaly_type", "none"),
             },
         )
+
+    @staticmethod
+    def _signature(action: InvoiceAction) -> Tuple[Any, ...]:
+        return (
+            tuple(sorted(action.extracted_fields.items())),
+            action.category,
+            action.anomaly_flag,
+        )
+
+    @staticmethod
+    def _is_destructive_action(action: InvoiceAction, missing_fields: int) -> bool:
+        if missing_fields == 2 and not action.category and action.anomaly_flag is None:
+            return True
+
+        raw_values = [
+            str(action.extracted_fields.get("vendor_name", "") or "").lower(),
+            str(action.extracted_fields.get("invoice_date", "") or "").lower(),
+        ]
+        unsafe_markers = ("drop table", "delete all", "rm -rf", "__terminal__")
+        return any(marker in value for value in raw_values for marker in unsafe_markers)
