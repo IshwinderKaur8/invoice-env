@@ -9,11 +9,27 @@ def _normalize(value: str) -> str:
 	return value.strip().lower()
 
 
+def _clamp_open_unit(value: float) -> float:
+	# Keep task scores strictly inside (0, 1) for validator compatibility.
+	return max(0.001, min(0.999, float(value)))
+
+
 def grade_extraction(extracted_fields: Dict[str, Any], invoice: Dict[str, Any]) -> float:
 	"""
 	Grade field extraction for vendor_name and invoice_date.
 	Exact match: 1.0, fuzzy (>80): partial score, otherwise 0.
 	"""
+	# Support validators that pass full action payload as first arg.
+	if isinstance(extracted_fields, dict) and "extracted_fields" in extracted_fields:
+		nested = extracted_fields.get("extracted_fields")
+		if isinstance(nested, dict):
+			extracted_fields = nested
+
+	if not isinstance(extracted_fields, dict):
+		extracted_fields = {}
+	if not isinstance(invoice, dict):
+		invoice = {}
+
 	required = ("vendor_name", "invoice_date")
 	per_field_scores = []
 
@@ -32,7 +48,7 @@ def grade_extraction(extracted_fields: Dict[str, Any], invoice: Dict[str, Any]) 
 			per_field_scores.append(0.001)
 
 	score = round(sum(per_field_scores) / len(required), 4)
-	return max(0.001, min(0.999, score))
+	return _clamp_open_unit(score)
 
 
 def grade_category(predicted_category: Optional[str], invoice: Dict[str, Any]) -> float:
@@ -41,18 +57,25 @@ def grade_category(predicted_category: Optional[str], invoice: Dict[str, Any]) -
 	Correct: 1.0, close guess: 0.5, otherwise 0.0.
 	Also accepts optional top-2 format "A|B" where second position gets 0.5.
 	"""
+	# Support validators that pass full action payload as first arg.
+	if isinstance(predicted_category, dict):
+		predicted_category = predicted_category.get("category")
+
+	if not isinstance(invoice, dict):
+		invoice = {}
+
 	truth = invoice.get("category")
 	if predicted_category is None:
-		return max(0.001, min(0.999, 0.001))
+		return _clamp_open_unit(0.001)
 
 	tokens = [piece.strip() for piece in predicted_category.replace("|", ",").split(",") if piece.strip()]
 	if not tokens:
-		return max(0.001, min(0.999, 0.001))
+		return _clamp_open_unit(0.001)
 
 	if tokens[0] == truth:
-		return max(0.001, min(0.999, 0.999))
+		return _clamp_open_unit(0.999)
 	if truth in tokens[:2]:
-		return max(0.001, min(0.999, 0.5))
+		return _clamp_open_unit(0.5)
 
 	close_pairs = {
 		frozenset(("Travel", "Misc")),
@@ -60,8 +83,8 @@ def grade_category(predicted_category: Optional[str], invoice: Dict[str, Any]) -
 		frozenset(("Utilities", "Misc")),
 	}
 	if frozenset((tokens[0], truth)) in close_pairs:
-		return max(0.001, min(0.999, 0.5))
-	return max(0.001, min(0.999, 0.001))
+		return _clamp_open_unit(0.5)
+	return _clamp_open_unit(0.001)
 
 
 def detection_metrics(tp: int, fp: int, fn: int) -> Dict[str, float]:
@@ -82,14 +105,21 @@ def detection_metrics(tp: int, fp: int, fn: int) -> Dict[str, float]:
 def grade_anomaly(
 	predicted_flag: Optional[bool],
 	invoice: Dict[str, Any],
-	*,
-	tp: int,
-	fp: int,
-	fn: int,
+	tp: int = 0,
+	fp: int = 0,
+	fn: int = 0,
+	**_: Any,
 ) -> float:
 	"""
 	Grade anomaly detection using F1 over running confusion counts.
 	"""
+	# Support validators that pass full action payload as first arg.
+	if isinstance(predicted_flag, dict):
+		predicted_flag = predicted_flag.get("anomaly_flag")
+
+	if not isinstance(invoice, dict):
+		invoice = {}
+
 	truth = bool(invoice.get("anomaly_flag", False))
 	pred = bool(predicted_flag) if predicted_flag is not None else False
 
@@ -97,5 +127,9 @@ def grade_anomaly(
 	next_fp = fp + int(pred and not truth)
 	next_fn = fn + int((not pred) and truth)
 
-	score = detection_metrics(next_tp, next_fp, next_fn)["f1"]
-	return max(0.001, min(0.999, score))
+	f1 = detection_metrics(next_tp, next_fp, next_fn)["f1"]
+	if f1 <= 0.0:
+		return _clamp_open_unit(0.001)
+	if f1 >= 1.0:
+		return _clamp_open_unit(0.999)
+	return _clamp_open_unit(f1)
