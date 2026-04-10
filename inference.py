@@ -14,7 +14,7 @@ load_dotenv()
 
 
 IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+API_KEY = os.getenv("HF_TOKEN")
 
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
@@ -152,7 +152,7 @@ def run() -> None:
         requires_auth = "huggingface.co" in API_BASE_URL.lower()
         if requires_auth and not API_KEY:
             raise RuntimeError(
-                "Missing required environment variable: HF_TOKEN or API_KEY for Hugging Face router"
+                "Missing required environment variable: HF_TOKEN"
             )
 
         # Referenced for organizer compatibility when using image-backed environments.
