@@ -20,12 +20,12 @@ tasks:
     grader: env/graders.py::grade_extraction
     graders:
       - env/graders.py::grade_extraction
-    grading: Exact match gets 0.99, fuzzy match above 0.8 gets partial credit, minimum 0.01.
+    grading: Exact match gets 0.999, fuzzy match above 0.8 gets partial credit, minimum 0.001.
     score_range:
       min_exclusive: 0.0
       max_exclusive: 1.0
       min_returned: 0.001
-      max_returned: 0.99
+      max_returned: 0.999
   - id: expense_categorization
     name: Expense Categorization
     title: Expense Categorization
@@ -54,8 +54,6 @@ tasks:
       max_exclusive: 1.0
       min_returned: 0.001
       max_returned: 0.999
-      min_returned: 0.001
-      max_returned: 0.99
 
 schemas:
   observation: env/models.py::InvoiceObservation

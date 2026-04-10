@@ -27,7 +27,7 @@ def _coerce_invoice(invoice: Any, kwargs: Dict[str, Any]) -> Dict[str, Any]:
 def grade_extraction(extracted_fields: Any = None, invoice: Any = None, *args: Any, **kwargs: Any) -> float:
 	"""
 	Grade field extraction for vendor_name and invoice_date.
-	Exact match: 0.99, fuzzy (>80): partial score, otherwise 0.001.
+	Exact match: 0.999, fuzzy (>80): partial score, otherwise 0.001.
 	"""
 	# Support validators that pass action payload under different names.
 	if extracted_fields is None:
@@ -52,11 +52,11 @@ def grade_extraction(extracted_fields: Any = None, invoice: Any = None, *args: A
 		truth = str(invoice.get(key, "") or "")
 
 		if _normalize(pred) == _normalize(truth):
-			per_field_scores.append(0.99)
+			per_field_scores.append(0.999)
 		else:
 			ratio = fuzz.ratio(_normalize(pred), _normalize(truth))
 			if ratio >= 80:
-				per_field_scores.append(min(0.99, ratio / 100.0))
+				per_field_scores.append(min(0.998, ratio / 100.0))
 			else:
 				per_field_scores.append(0.001)
 
