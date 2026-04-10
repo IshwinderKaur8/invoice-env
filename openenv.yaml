@@ -48,6 +48,12 @@ tasks:
     grader: env/graders.py::grade_anomaly
     graders:
       - env/graders.py::grade_anomaly
+    grading: F1 score over anomaly detection predictions, minimum 0.001.
+    score_range:
+      min_exclusive: 0.0
+      max_exclusive: 1.0
+      min_returned: 0.001
+      max_returned: 0.999
     grading: Continuous deterministic reward using precision, recall, and F1, clamped to [0.01, 0.99].
     score_range:
       min_exclusive: 0.0
