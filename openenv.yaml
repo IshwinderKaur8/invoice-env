@@ -7,8 +7,11 @@ tags:
   - finance
   - invoice-processing
 
+spec_version: "1.0"
+app: env.environment:InvoiceEnv
+
 environment:
-  entrypoint: env/environment.py::InvoiceEnv
+  entrypoint: env.environment:InvoiceEnv
   episode_definition: One episode is one batch of invoices.
 
 tasks:
@@ -17,9 +20,9 @@ tasks:
     title: Field Extraction
     difficulty: easy
     description: Extract vendor_name and invoice_date from invoice data.
-    grader: env/graders.py::grade_extraction
+    grader: env.graders:grade_extraction
     graders:
-      - env/graders.py::grade_extraction
+      - env.graders:grade_extraction
     grading: Exact match gets 0.999, fuzzy match above 0.8 gets partial credit, minimum 0.001.
     score_range:
       min_exclusive: 0.0
@@ -31,9 +34,9 @@ tasks:
     title: Expense Categorization
     difficulty: medium
     description: Classify into Travel, Office Supplies, Utilities, or Misc.
-    grader: env/graders.py::grade_category
+    grader: env.graders:grade_category
     graders:
-      - env/graders.py::grade_category
+      - env.graders:grade_category
     grading: Correct is 0.999, close guess is 0.8 (supports optional top-2 format), minimum 0.001.
     score_range:
       min_exclusive: 0.0
@@ -45,9 +48,9 @@ tasks:
     title: Anomaly Detection
     difficulty: hard
     description: Identify duplicate invoices and unusually high amounts.
-    grader: env/graders.py::grade_anomaly
+    grader: env.graders:grade_anomaly
     graders:
-      - env/graders.py::grade_anomaly
+      - env.graders:grade_anomaly
     grading: F1 score over anomaly detection predictions, minimum 0.001.
     score_range:
       min_exclusive: 0.0
@@ -56,6 +59,6 @@ tasks:
       max_returned: 0.999
 
 schemas:
-  observation: env/models.py::InvoiceObservation
-  action: env/models.py::InvoiceAction
-  reward: env/models.py::InvoiceReward
+  observation: env.models:InvoiceObservation
+  action: env.models:InvoiceAction
+  reward: env.models:InvoiceReward

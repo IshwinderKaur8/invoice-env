@@ -165,26 +165,31 @@ class InvoiceEnv:
             min(MAX_REWARD_SCORE, reward_parts["final_score"] - loop_penalty - destructive_penalty),
         )
 
-        reward = InvoiceReward(
-            score=total_score,
-            details={
-                "extraction": extraction_score,
-                "category": category_score,
-                "anomaly": anomaly_score,
+        reward_details = {
+            "extraction": extraction_score,
+            "category": category_score,
+            "anomaly": anomaly_score,
+            "field_extraction": extraction_score,
+            "expense_categorization": category_score,
+            "anomaly_detection": anomaly_score,
+            "task_scores": {
                 "field_extraction": extraction_score,
                 "expense_categorization": category_score,
                 "anomaly_detection": anomaly_score,
-                "task_scores": {
-                    "field_extraction": extraction_score,
-                    "expense_categorization": category_score,
-                    "anomaly_detection": anomaly_score,
-                },
-                "base_score": reward_parts["base_score"],
-                "penalty": reward_parts["penalty"],
-                "loop_penalty": loop_penalty,
-                "destructive_penalty": destructive_penalty,
-                "missing_fields": missing_fields,
             },
+            "base_score": reward_parts["base_score"],
+            "missing_fields": missing_fields,
+        }
+        if reward_parts["penalty"] > 0.0:
+            reward_details["penalty"] = reward_parts["penalty"]
+        if loop_penalty > 0.0:
+            reward_details["loop_penalty"] = loop_penalty
+        if destructive_penalty > 0.0:
+            reward_details["destructive_penalty"] = destructive_penalty
+
+        reward = InvoiceReward(
+            score=total_score,
+            details=reward_details,
         )
 
         # Update metrics
